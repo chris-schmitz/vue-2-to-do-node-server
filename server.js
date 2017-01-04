@@ -14,21 +14,6 @@ const PORT = 8082
 let dbmanager = new DatabaseManager({url: 'mongodb://localhost:27017/vue-to-do-2'})
 
 
-
-
-
-// function getDbConnection(){
-//     return new Promise((resolve, reject) => {
-//         MongoClient.connect(dburl, (error, db) => {
-//             if(error) reject(error)
-//             resolve(db.collection('tasks'))
-//         })
-//     })
-// }
-// const mockTasks = require('../vue-todo-client/src/components/MockTasks.js')
-
-
-
 function sendResponse(result, code, message, payload){
     result.status(code).json({message,payload})
 }
@@ -41,25 +26,30 @@ server.get('/tasks', (req, res) => {
     co(function *(){
         let taskCollection = dbmanager.getDatabase().collection('tasks')
         let tasks = yield taskCollection
-                            .find()
+                            .find({})
                             .toArray()
-        dbmanager.closeDatabase()
         sendResponse(res, 200, "Returning all tasks.", {tasks})
     })
     .catch((error) => {
+        console.error(error)
         sendResponse(res, 500, "Error returning tasks.", {error})
     })
-    // co(function *(){
-    //     let taskdb = yield getDbConnection()
-    //     let tasks = yield taskdb.find().toArray()
-    //     closeDbConnection()
-    //    sendResponse(res, 200, "test worked", {tasks})
-    // })
 })
 
 server.post('/tasks', (req, res) => {
-
-    res.json({payload: {tasks: []}})
+    co(function *(){
+        // let task = {title: 'Feed the cat', description:'Feed the cat', complete: true, history: []}
+        // post a task
+        let task = req.body.task
+        
+        let taskCollection = dbmanager.getDatabase().collection('tasks')
+        let result = yield taskCollection.insertOne(task)
+        // dbmanager.closeDatabase()
+        sendResponse(res, 200, "Task inserted.", {result: result.ops[0]})
+    })
+    .catch((error) => {
+        sendResponse(res, 500, "Error inserting task.", {error})
+    })
 })
 
 server.patch('/tasks/:id', (req, res) => {

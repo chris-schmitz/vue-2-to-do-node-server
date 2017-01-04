@@ -5,7 +5,9 @@
   "author": "schmitz.chris@gmail.com",
   "license": "MIT",
   "scripts": {
-    "serve": "nodemon server.js"
+    "serve": "npm run serve:db & npm run serve:db",
+    "serve:api": "nodemon server.js",
+    "serve:db": "mongod --config mongodb.conf"
   },
   "dependencies": {
     "body-parser": "^1.15.2",
