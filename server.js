@@ -1,6 +1,7 @@
 const express = require('express')
 const server = express()
 const cors = require('cors')
+const {ObjectId} = require('mongodb')
 
 const {urlencoded, json} = require('body-parser')
 const co = require('co')
@@ -15,6 +16,9 @@ let dbmanager = new DatabaseManager({url: 'mongodb://localhost:27017/vue-to-do-2
 
 
 function sendResponse(result, code, message, payload){
+    if(Number((code).toString().split('').slice(0,1)) !== 2){
+        console.error(payload)
+    }
     result.status(code).json({message,payload})
 }
 
@@ -31,7 +35,6 @@ server.get('/tasks', (req, res) => {
         sendResponse(res, 200, "Returning all tasks.", {tasks})
     })
     .catch((error) => {
-        console.error(error)
         sendResponse(res, 500, "Error returning tasks.", {error})
     })
 })
@@ -45,19 +48,65 @@ server.post('/tasks', (req, res) => {
         let taskCollection = dbmanager.getDatabase().collection('tasks')
         let result = yield taskCollection.insertOne(task)
         // dbmanager.closeDatabase()
-        sendResponse(res, 200, "Task inserted.", {result: result.ops[0]})
+        sendResponse(res, 200, "Task inserted.", {record: result.ops[0]})
     })
     .catch((error) => {
         sendResponse(res, 500, "Error inserting task.", {error})
     })
 })
 
+server.get('/tasks/:id', (req,res) => {
+    co(function *(){
+        let id = req.params.id
+        let taskcollection = dbmanager.getCollection('tasks')
+
+        let task = yield taskcollection
+                            .find({_id: ObjectId(id)})
+                            .toArray()
+
+        sendResponse(res, 200, "Task retrieved", {task})
+    })
+    .catch(error => {
+        sendResponse(res, 500, "Error getting task.", {error})
+    })
+})
+
 server.patch('/tasks/:id', (req, res) => {
-    res.json({payload: req.params.id})
+    co(function *(){
+        let id = req.params.id
+        let task = req.body.task
+        delete task._id
+
+        let taskcollection = dbmanager.getCollection('tasks')
+
+        yield taskcollection
+                        .update(
+                            {_id: ObjectId(id)},
+                            task
+                        )
+
+        sendResponse(res, 200, "Task updated.", {})
+    })
+    .catch(error => {
+        sendResponse(res, 500, "Error updating task.", {error})
+    })
 })
 
 server.delete('/tasks/:id', (req, res) => {
-    res.json({payload: req.params.id})
+    co(function *(){
+        let id = req.params.id
+        let taskcollection = dbmanager.getCollection('tasks')
+
+        yield taskcollection
+                .remove(
+                    {_id: ObjectId(id)},
+                    {justOne: true}
+                )
+        sendResponse(res, 200, "Task deleted", {})
+    })
+    .catch(error => {
+        sendResponse(res, 500, "Error deleting task.", {error})
+    })
 })
 
 server.listen(PORT, () => {

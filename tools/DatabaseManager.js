@@ -8,6 +8,9 @@ function DatabaseManager(options){
 
     co(function*(){
         me.db = yield MongoClient.connect(me.url)
+        if(typeof me.db === 'undefined'){
+            throw new Error('Unable to connect to database')
+        }
     })
     .catch((error) => {
         console.error(error)
@@ -16,6 +19,10 @@ function DatabaseManager(options){
 
 DatabaseManager.prototype.getDatabase = function (){
     return this.db
+}
+
+DatabaseManager.prototype.getCollection = function (collectionName){
+    return this.db.collection(collectionName)
 }
 
 DatabaseManager.prototype.closeDatabase = function(){
